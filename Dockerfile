@@ -1,10 +1,5 @@
 FROM ruby:2.4.3
 
-ENV LANG C.UTF-8
-
-RUN groupadd --gid 1000 node \
-  && useradd --uid 1000 --gid node --shell /bin/bash --create-home node
-
 # gpg keys listed at https://github.com/nodejs/node#release-team
 RUN set -ex \
   && for key in \
@@ -21,9 +16,6 @@ RUN set -ex \
     gpg --keyserver ha.pool.sks-keyservers.net --recv-keys "$key" ; \
   done
 
-ENV NPM_CONFIG_LOGLEVEL info
-ENV NODE_MAJOR 6
-
 RUN NODE_VERSION=6.11.3 \
   ARCH= && dpkgArch="$(dpkg --print-architecture)" \
   && case "${dpkgArch##*-}" in \
@@ -38,9 +30,7 @@ RUN NODE_VERSION=6.11.3 \
   && curl -SLO --compressed "https://nodejs.org/dist/v$NODE_VERSION/SHASUMS256.txt.asc" \
   && gpg --batch --decrypt --output SHASUMS256.txt SHASUMS256.txt.asc \
   && grep " node-v$NODE_VERSION-linux-$ARCH.tar.xz\$" SHASUMS256.txt | sha256sum -c - \
-  && tar -xJf "node-v$NODE_VERSION-linux-$ARCH.tar.xz" -C /usr/local --strip-components=1 \
-  && rm "node-v$NODE_VERSION-linux-$ARCH.tar.xz" SHASUMS256.txt.asc SHASUMS256.txt \
-  && ln -s /usr/local/bin/node /usr/local/bin/nodejs
+  && tar -xJf "node-v$NODE_VERSION-linux-$ARCH.tar.xz" -C /usr/local --strip-components=1
 
 RUN YARN_VERSION=$(curl -sSL --compressed https://yarnpkg.com/latest-version) \
   set -ex \
@@ -55,7 +45,22 @@ RUN YARN_VERSION=$(curl -sSL --compressed https://yarnpkg.com/latest-version) \
   && curl -fSLO --compressed "https://yarnpkg.com/downloads/$YARN_VERSION/yarn-v$YARN_VERSION.tar.gz.asc" \
   && gpg --batch --verify yarn-v$YARN_VERSION.tar.gz.asc yarn-v$YARN_VERSION.tar.gz \
   && mkdir -p /opt/yarn \
-  && tar -xzf yarn-v$YARN_VERSION.tar.gz -C /opt/yarn --strip-components=1 \
+  && tar -xzf yarn-v$YARN_VERSION.tar.gz -C /opt/yarn --strip-components=1
+
+# Start new image (Clears all GPG keys and downloaded files.)
+FROM ruby:2.4.3
+
+ENV LANG C.UTF-8
+ENV NPM_CONFIG_LOGLEVEL info
+ENV NODE_MAJOR 6
+
+RUN groupadd --gid 1000 node \
+  && useradd --uid 1000 --gid node --shell /bin/bash --create-home node
+
+COPY --from=0 /usr/local/bin/node /usr/local/bin/node
+COPY --from=0 /opt/yarn/bin /opt/yarn/bin
+COPY --from=0 /opt/yarn/lib /opt/yarn/lib
+
+RUN ln -s /usr/local/bin/node /usr/local/bin/nodejs \
   && ln -s /opt/yarn/bin/yarn /usr/local/bin/yarn \
-  && ln -s /opt/yarn/bin/yarn /usr/local/bin/yarnpkg \
-  && rm yarn-v$YARN_VERSION.tar.gz.asc yarn-v$YARN_VERSION.tar.gz
+  && ln -s /opt/yarn/bin/yarn /usr/local/bin/yarnpkg
