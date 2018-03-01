@@ -47,8 +47,10 @@ RUN YARN_VERSION=$(curl -sSL --compressed https://yarnpkg.com/latest-version) \
   && mkdir -p /opt/yarn \
   && tar -xzf yarn-v$YARN_VERSION.tar.gz -C /opt/yarn --strip-components=1
 
-# Start new image (Clears all GPG keys and downloaded files.)
-FROM ruby:2.4.3-slim-stretch
+
+# Start new image
+# --------------------------
+FROM ruby:2.4.3-slim-jessie
 
 ENV LANG C.UTF-8
 ENV NPM_CONFIG_LOGLEVEL info
