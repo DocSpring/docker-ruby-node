@@ -48,19 +48,18 @@ RUN YARN_VERSION=$(curl -sSL --compressed https://yarnpkg.com/latest-version) \
   && tar -xzf yarn-v$YARN_VERSION.tar.gz -C /opt/yarn --strip-components=1
 
 # Start new image (Clears all GPG keys and downloaded files.)
-FROM ruby:2.4.3
+FROM ruby:2.4.3-slim-stretch
 
 ENV LANG C.UTF-8
 ENV NPM_CONFIG_LOGLEVEL info
 ENV NODE_MAJOR 6
 
-RUN groupadd --gid 1000 node \
-  && useradd --uid 1000 --gid node --shell /bin/bash --create-home node
-
 COPY --from=0 /usr/local/bin/node /usr/local/bin/node
 COPY --from=0 /opt/yarn/bin /opt/yarn/bin
 COPY --from=0 /opt/yarn/lib /opt/yarn/lib
 
-RUN ln -s /usr/local/bin/node /usr/local/bin/nodejs \
+RUN groupadd --gid 1000 node \
+  && useradd --uid 1000 --gid node --shell /bin/bash --create-home node \
+  && ln -s /usr/local/bin/node /usr/local/bin/nodejs \
   && ln -s /opt/yarn/bin/yarn /usr/local/bin/yarn \
   && ln -s /opt/yarn/bin/yarn /usr/local/bin/yarnpkg
